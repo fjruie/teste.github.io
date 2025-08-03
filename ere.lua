@@ -36,26 +36,23 @@ local Tabs = {
 
 
 
-
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local PET_API_URL = "https://eeeiqjjj50--er.repl.co/recent-pets"
 
 local petDataList = {}
 
-Tabs.Brainrot:Dropdown({
+local dropdownObj = Tabs.Brainrot:Dropdown({
     Title = "Secret Pet Servers (Select to Join)",
     Values = { "Loading..." },
     Multi = false,
     AllowNone = true,
     Callback = function(selected)
         if not selected or not selected[1] then return end
-        for i, label in ipairs(petDataList) do
-            if label.label == selected[1] then
-                local placeId = label.placeId
-                local jobId = label.jobId
-                if placeId and jobId and jobId ~= "" then
-                    TeleportService:TeleportToPlaceInstance(tonumber(placeId), jobId)
+        for i, entry in ipairs(petDataList) do
+            if entry.label == selected[1] then
+                if entry.placeId and entry.jobId and entry.jobId ~= "" then
+                    TeleportService:TeleportToPlaceInstance(tonumber(entry.placeId), entry.jobId)
                 end
                 break
             end
@@ -63,7 +60,7 @@ Tabs.Brainrot:Dropdown({
     end
 })
 
-function Tabs.Brainrot:RefreshDropdown()
+local function refreshDropdown()
     local ok, data = pcall(function()
         return HttpService:JSONDecode(game:HttpGet(PET_API_URL))
     end)
@@ -88,23 +85,20 @@ function Tabs.Brainrot:RefreshDropdown()
         dropdownValues = { "No pets found." }
         petDataList = {}
     end
-    -- This refreshes the dropdown in WindUI!
-    Tabs.Brainrot.Dropdown:Refresh(dropdownValues)
+    dropdownObj:Refresh(dropdownValues)
 end
 
 Tabs.Brainrot:Button({
     Title = "Refresh Pet List",
-    Callback = function()
-        Tabs.Brainrot:RefreshDropdown()
-    end
+    Callback = refreshDropdown
 })
 
--- Optionally: auto-refresh every 15 seconds
+-- Optional: auto-refresh
 task.spawn(function()
     while true do
-        Tabs.Brainrot:RefreshDropdown()
+        refreshDropdown()
         task.wait(15)
     end
 end)
 
-Tabs.Brainrot:RefreshDropdown()
+refreshDropdown()
