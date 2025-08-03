@@ -36,49 +36,75 @@ local Tabs = {
 
 
 
+
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local PET_API_URL = "https://eeeiqjjj50--er.repl.co/recent-pets"
 
-local function refreshPetList()
-    -- (No need to clear old buttons, WindUI handles this or you simply add more)
+local petDataList = {}
+
+Tabs.Brainrot:Dropdown({
+    Title = "Secret Pet Servers (Select to Join)",
+    Values = { "Loading..." },
+    Multi = false,
+    AllowNone = true,
+    Callback = function(selected)
+        if not selected or not selected[1] then return end
+        for i, label in ipairs(petDataList) do
+            if label.label == selected[1] then
+                local placeId = label.placeId
+                local jobId = label.jobId
+                if placeId and jobId and jobId ~= "" then
+                    TeleportService:TeleportToPlaceInstance(tonumber(placeId), jobId)
+                end
+                break
+            end
+        end
+    end
+})
+
+function Tabs.Brainrot:RefreshDropdown()
     local ok, data = pcall(function()
         return HttpService:JSONDecode(game:HttpGet(PET_API_URL))
     end)
+    local dropdownValues = {}
+    petDataList = {}
     if ok and type(data) == "table" and #data > 0 then
         for _, pet in ipairs(data) do
+            local jobId = tostring(pet.jobId):gsub("```lua", ""):gsub("```", ""):gsub("\n", ""):gsub("^%s*(.-)%s*$", "%1")
             local label = (pet.name or "?")
             if pet.mutation and pet.mutation ~= "" then
                 label = label .. " ["..pet.mutation.."]"
             end
-            label = label .. " | " .. (pet.dps or "?") .. " | " .. (pet.jobId or "?")
-            Tabs.Brainrot:Button({
-                Title = label,
-                Callback = function()
-                    if pet.placeId and pet.jobId then
-                        TeleportService:TeleportToPlaceInstance(tonumber(pet.placeId), pet.jobId)
-                    end
-                end
+            label = label .. " | " .. (pet.dps or "?") .. " | " .. (jobId or "?")
+            table.insert(dropdownValues, label)
+            table.insert(petDataList, {
+                label = label,
+                placeId = pet.placeId,
+                jobId = jobId
             })
         end
     else
-        Tabs.Brainrot:Button({
-            Title = "No pets found yet.",
-            Callback = function() end
-        })
+        dropdownValues = { "No pets found." }
+        petDataList = {}
     end
+    -- This refreshes the dropdown in WindUI!
+    Tabs.Brainrot.Dropdown:Refresh(dropdownValues)
 end
 
 Tabs.Brainrot:Button({
     Title = "Refresh Pet List",
-    Callback = refreshPetList
+    Callback = function()
+        Tabs.Brainrot:RefreshDropdown()
+    end
 })
 
+-- Optionally: auto-refresh every 15 seconds
 task.spawn(function()
     while true do
-        refreshPetList()
+        Tabs.Brainrot:RefreshDropdown()
         task.wait(15)
     end
 end)
 
-refreshPetList()
+Tabs.Brainrot:RefreshDropdown()
