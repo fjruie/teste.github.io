@@ -35,7 +35,6 @@ local Tabs = {
 
 
 
-Tabs.Brainrot = Window:Tab({ Title = "BRAINROT Joiner", Icon = "brain" })
 
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
