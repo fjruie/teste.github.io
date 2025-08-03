@@ -36,25 +36,37 @@ local Tabs = {
 
 
 
+
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local PET_API_URL = "https://eeeiqjjj50--er.repl.co/recent-pets"
 
 local petDataList = {}
+local selectedPetIndex = nil
 
 local dropdownObj = Tabs.Brainrot:Dropdown({
-    Title = "Secret Pet Servers (Select to Join)",
+    Title = "Secret Pet Servers",
     Values = { "Loading..." },
     Multi = false,
-    AllowNone = true,
+    AllowNone = false,
     Callback = function(selected)
-        if not selected or not selected[1] then return end
+        -- Find which index was selected
         for i, entry in ipairs(petDataList) do
-            if entry.label == selected[1] then
-                if entry.placeId and entry.jobId and entry.jobId ~= "" then
-                    TeleportService:TeleportToPlaceInstance(tonumber(entry.placeId), entry.jobId)
-                end
+            if entry.name == selected[1] then
+                selectedPetIndex = i
                 break
+            end
+        end
+    end
+})
+
+Tabs.Brainrot:Button({
+    Title = "Join server",
+    Callback = function()
+        if selectedPetIndex and petDataList[selectedPetIndex] then
+            local pet = petDataList[selectedPetIndex]
+            if pet.placeId and pet.jobId and pet.jobId ~= "" then
+                TeleportService:TeleportToPlaceInstance(tonumber(pet.placeId), pet.jobId)
             end
         end
     end
@@ -64,26 +76,26 @@ local function refreshDropdown()
     local ok, data = pcall(function()
         return HttpService:JSONDecode(game:HttpGet(PET_API_URL))
     end)
-    local dropdownValues = {}
     petDataList = {}
+    local dropdownValues = {}
     if ok and type(data) == "table" and #data > 0 then
         for _, pet in ipairs(data) do
+            -- Clean up jobId if needed
             local jobId = tostring(pet.jobId):gsub("```lua", ""):gsub("```", ""):gsub("\n", ""):gsub("^%s*(.-)%s*$", "%1")
-            local label = (pet.name or "?")
-            if pet.mutation and pet.mutation ~= "" then
-                label = label .. " ["..pet.mutation.."]"
-            end
-            label = label .. " | " .. (pet.dps or "?") .. " | " .. (jobId or "?")
-            table.insert(dropdownValues, label)
+            -- Only use the pet's name in the dropdown
+            local name = tostring(pet.name or "?")
+            table.insert(dropdownValues, name)
             table.insert(petDataList, {
-                label = label,
+                name = name,
                 placeId = pet.placeId,
                 jobId = jobId
             })
         end
+        -- Default to first pet selected
+        selectedPetIndex = #petDataList > 0 and 1 or nil
     else
         dropdownValues = { "No pets found." }
-        petDataList = {}
+        selectedPetIndex = nil
     end
     dropdownObj:Refresh(dropdownValues)
 end
@@ -93,7 +105,7 @@ Tabs.Brainrot:Button({
     Callback = refreshDropdown
 })
 
--- Optional: auto-refresh
+-- Optionally: auto-refresh every 15 seconds
 task.spawn(function()
     while true do
         refreshDropdown()
