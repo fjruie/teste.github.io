@@ -1,117 +1,158 @@
-local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-
-local Window = WindUI:CreateWindow({
-    Folder = "Ringta Scripts",
-    Title = "RINGTA",
-    Icon = "star",
-    Author = "discord.gg/ringta",
-    Theme = "Dark",
-    Size = UDim2.fromOffset(500, 350),
-    Transparent = false,
-    HasOutline = true,
-})
-
-Window:EditOpenButton({
-    Title = "Open RINGTA SCRIPTS",
-    Icon = "pointer",
-    CornerRadius = UDim.new(0, 6),
-    StrokeThickness = 2,
-    Color = ColorSequence.new(Color3.fromRGB(200, 0, 255), Color3.fromRGB(0, 200, 255)),
-    Draggable = true,
-})
-
-local Tabs = {
-    Main = Window:Tab({ Title = "Main", Icon = "star" }),
-    Hide = Window:Tab({ Title = "Visual", Icon = "eye-off" }),
-    Jump = Window:Tab({ Title = "Shop", Icon = "shopping-basket" }),
-    Random = Window:Tab({ Title = "Random Features", Icon = "dices" }),
-    Credit = Window:Tab({ Title = "Credit", Icon = "medal" }),
-    Brainrot = Window:Tab({ Title = "BRAINROT Joiner", Icon = "brain" }), -- <-- add this line
-}
-
-
-
-
-
-Tabs.Brainrot = Window:Tab({ Title = "BRAINROT Joiner", Icon = "brain" })
-
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
-local PET_API_URL = "https://eeeiqjjj50--er.repl.co/recent-pets"
+local LocalPlayer = Players.LocalPlayer
+local PET_API_URL = "https://er--eeeiqjjj50.repl.co/recent-pets" -- Make sure this is reachable by Roblox!
 
-local petDataList = {}
-local selectedPetIndex = nil
-
-local dropdownObj = Tabs.Brainrot:Dropdown({
-    Title = "Secret Pet Servers",
-    Values = { "Loading..." },
-    Multi = false,
-    AllowNone = false,
-    Callback = function(selected)
-        if not selected or not selected[1] then selectedPetIndex = nil return end
-        for i, pet in ipairs(petDataList) do
-            if pet.name == selected[1] then
-                selectedPetIndex = i
-                break
-            end
-        end
-    end
-})
-
-Tabs.Brainrot:Button({
-    Title = "Join server",
-    Callback = function()
-        if selectedPetIndex and petDataList[selectedPetIndex] then
-            local pet = petDataList[selectedPetIndex]
-            if pet.placeId and pet.jobId and pet.jobId ~= "" then
-                TeleportService:TeleportToPlaceInstance(tonumber(pet.placeId), pet.jobId)
-            end
-        end
-    end
-})
-
-local function refreshDropdown()
-    local ok, data = pcall(function()
-        return HttpService:JSONDecode(game:HttpGet(PET_API_URL))
-    end)
-    petDataList = {}
-    local dropdownValues = {}
-    if ok and type(data) == "table" and #data > 0 then
-        for _, pet in ipairs(data) do
-            -- CLEAN JOBID!
-            local jobId = tostring(pet.jobId):gsub("```lua", ""):gsub("```", ""):gsub("\n", ""):gsub("^%s*(.-)%s*$", "%1")
-            local name = tostring(pet.name or "?")
-            table.insert(dropdownValues, name)
-            table.insert(petDataList, {
-                name = name,
-                placeId = pet.placeId,
-                jobId = jobId
-            })
-        end
-        -- Default to first pet selected
-        selectedPetIndex = #petDataList > 0 and 1 or nil
-    else
-        dropdownValues = { "No pets found." }
-        selectedPetIndex = nil
-    end
-    dropdownObj:Refresh(dropdownValues)
+-- Remove previous UI if it exists
+if game.CoreGui:FindFirstChild("BrainrotJoiner") then
+    game.CoreGui.BrainrotJoiner:Destroy()
 end
 
-Tabs.Brainrot:Button({
-    Title = "Refresh Pet List",
-    Callback = refreshDropdown
-})
+-- Main UI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BrainrotJoiner"
+screenGui.Parent = game.CoreGui
 
--- Optional: auto-refresh every 15 seconds
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 500, 0, 350)
+mainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
+mainFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 40)
+mainFrame.BorderSizePixel = 0
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.Parent = screenGui
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundTransparency = 1
+title.Text = "BRAINROT Joiner"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 28
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Parent = mainFrame
+
+local refreshBtn = Instance.new("TextButton")
+refreshBtn.Size = UDim2.new(0, 120, 0, 32)
+refreshBtn.Position = UDim2.new(1, -130, 0, 8)
+refreshBtn.Text = "Refresh"
+refreshBtn.Font = Enum.Font.GothamBold
+refreshBtn.TextSize = 20
+refreshBtn.BackgroundColor3 = Color3.fromRGB(60, 80, 180)
+refreshBtn.TextColor3 = Color3.fromRGB(255,255,255)
+refreshBtn.Parent = mainFrame
+
+local petListFrame = Instance.new("Frame")
+petListFrame.Position = UDim2.new(0, 10, 0, 50)
+petListFrame.Size = UDim2.new(1, -20, 1, -100)
+petListFrame.BackgroundTransparency = 1
+petListFrame.Parent = mainFrame
+
+local uilist = Instance.new("UIListLayout")
+uilist.Parent = petListFrame
+uilist.SortOrder = Enum.SortOrder.LayoutOrder
+uilist.Padding = UDim.new(0, 6)
+
+local joinBtn = Instance.new("TextButton")
+joinBtn.Size = UDim2.new(1, -40, 0, 40)
+joinBtn.Position = UDim2.new(0, 20, 1, -50)
+joinBtn.AnchorPoint = Vector2.new(0, 1)
+joinBtn.Text = "Join Server"
+joinBtn.Font = Enum.Font.GothamBold
+joinBtn.TextSize = 22
+joinBtn.BackgroundColor3 = Color3.fromRGB(40, 200, 80)
+joinBtn.TextColor3 = Color3.fromRGB(255,255,255)
+joinBtn.Parent = mainFrame
+joinBtn.Active = false
+joinBtn.AutoButtonColor = false
+
+-- State
+local petData = {}
+local selectedPet = nil
+
+function clearPetButtons()
+    for _, child in ipairs(petListFrame:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+end
+
+function updatePetList()
+    clearPetButtons()
+    if #petData == 0 then
+        local none = Instance.new("TextLabel")
+        none.Size = UDim2.new(1, 0, 0, 34)
+        none.BackgroundTransparency = 1
+        none.Text = "No pets found."
+        none.TextColor3 = Color3.fromRGB(200,80,80)
+        none.Font = Enum.Font.Gotham
+        none.TextSize = 22
+        none.Parent = petListFrame
+    else
+        for i, pet in ipairs(petData) do
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, 0, 0, 34)
+            btn.BackgroundColor3 = Color3.fromRGB(60, 60, 100)
+            btn.TextColor3 = Color3.fromRGB(255,255,255)
+            btn.Text = pet.name
+            btn.Font = Enum.Font.Gotham
+            btn.TextSize = 22
+            btn.Parent = petListFrame
+            btn.MouseButton1Click:Connect(function()
+                selectedPet = i
+                for _, other in ipairs(petListFrame:GetChildren()) do
+                    if other:IsA("TextButton") then
+                        other.BackgroundColor3 = Color3.fromRGB(60, 60, 100)
+                    end
+                end
+                btn.BackgroundColor3 = Color3.fromRGB(80, 160, 80)
+                joinBtn.Active = true
+                joinBtn.AutoButtonColor = true
+                joinBtn.BackgroundColor3 = Color3.fromRGB(40, 200, 80)
+            end)
+        end
+    end
+end
+
+function fetchPets()
+    local ok, data = pcall(function()
+        local response = game:HttpGet(PET_API_URL)
+        --print("RESPONSE:", response)
+        return HttpService:JSONDecode(response)
+    end)
+    petData = {}
+    selectedPet = nil
+    joinBtn.Active = false
+    joinBtn.AutoButtonColor = false
+    joinBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    if ok and type(data) == "table" then
+        for _, pet in ipairs(data) do
+            local jobId = tostring(pet.jobId):gsub("```lua", ""):gsub("```", ""):gsub("\n", ""):gsub("^%s*(.-)%s*$", "%1")
+            if tonumber(pet.placeId) and jobId ~= "" and pet.name and pet.name ~= "" then
+                table.insert(petData, {
+                    name = pet.name,
+                    placeId = pet.placeId,
+                    jobId = jobId
+                })
+            end
+        end
+    end
+    updatePetList()
+end
+
+refreshBtn.MouseButton1Click:Connect(fetchPets)
+
+joinBtn.MouseButton1Click:Connect(function()
+    if selectedPet and petData[selectedPet] then
+        local p = petData[selectedPet]
+        TeleportService:TeleportToPlaceInstance(tonumber(p.placeId), p.jobId)
+    end
+end)
+
+-- Auto refresh every 15s
 task.spawn(function()
-    while true do
-        refreshDropdown()
+    while screenGui.Parent do
+        fetchPets()
         task.wait(15)
     end
 end)
 
-refreshDropdown()
+fetchPets()
