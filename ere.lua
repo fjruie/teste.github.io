@@ -37,6 +37,8 @@ local Tabs = {
 
 
 
+Tabs.Brainrot = Window:Tab({ Title = "BRAINROT Joiner", Icon = "brain" })
+
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local PET_API_URL = "https://eeeiqjjj50--er.repl.co/recent-pets"
@@ -50,9 +52,9 @@ local dropdownObj = Tabs.Brainrot:Dropdown({
     Multi = false,
     AllowNone = false,
     Callback = function(selected)
-        -- Find which index was selected
-        for i, entry in ipairs(petDataList) do
-            if entry.name == selected[1] then
+        if not selected or not selected[1] then selectedPetIndex = nil return end
+        for i, pet in ipairs(petDataList) do
+            if pet.name == selected[1] then
                 selectedPetIndex = i
                 break
             end
@@ -80,9 +82,8 @@ local function refreshDropdown()
     local dropdownValues = {}
     if ok and type(data) == "table" and #data > 0 then
         for _, pet in ipairs(data) do
-            -- Clean up jobId if needed
+            -- CLEAN JOBID!
             local jobId = tostring(pet.jobId):gsub("```lua", ""):gsub("```", ""):gsub("\n", ""):gsub("^%s*(.-)%s*$", "%1")
-            -- Only use the pet's name in the dropdown
             local name = tostring(pet.name or "?")
             table.insert(dropdownValues, name)
             table.insert(petDataList, {
@@ -105,7 +106,7 @@ Tabs.Brainrot:Button({
     Callback = refreshDropdown
 })
 
--- Optionally: auto-refresh every 15 seconds
+-- Optional: auto-refresh every 15 seconds
 task.spawn(function()
     while true do
         refreshDropdown()
