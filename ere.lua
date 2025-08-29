@@ -547,61 +547,148 @@ end)
 
 
 
-local walkEnabled = false
-local walkRange = 500
-local plantBoxOrder = {}
-local currentIndex = 1
+
+
+-- Add to your WindUI setup, under Tabs.Brainrot (Auto Pickup?)
+local tweenPlantBoxEnabled = false
+local tweenBushEnabled = false
+local tweenRange = 250
 
 Tabs.Brainrot:Toggle({
-    Title = "Fast Walk Plant Boxes",
+    Title = "Tween to Plant Box",
     Default = false,
     Callback = function(val)
-        walkEnabled = val
+        tweenPlantBoxEnabled = val
     end
 })
 
-local character = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
-local root = character:WaitForChild("HumanoidRootPart")
+Tabs.Brainrot:Toggle({
+    Title = "Tween to Bush + Plant Box",
+    Default = false,
+    Callback = function(val)
+        tweenBushEnabled = val
+    end
+})
+
+Tabs.Brainrot:Slider({
+    Title = "Tween Range",
+    Value = {Min = 1, Max = 250, Default = 250},
+    Step = 1,
+    Callback = function(val)
+        tweenRange = tonumber(val)
+    end
+})
+
+local TweenService = game:GetService("TweenService")
+local tweening = nil
+
+local function tweenToTarget(targetCFrame)
+    if tweening then tweening:Cancel() end
+    local distance = (root.Position - targetCFrame.Position).Magnitude
+    local duration = distance / 21
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+    local tw = TweenService:Create(root, tweenInfo, { CFrame = targetCFrame })
+    tw:Play()
+    tweening = tw
+end
 
 local function getPlantBoxes(range)
     local plantboxes = {}
     for _, deployable in ipairs(workspace.Deployables:GetChildren()) do
-        if deployable:IsA("Model") and deployable.Name == "Plant Box" and deployable.PrimaryPart then
-            local dist = (root.Position - deployable.PrimaryPart.Position).Magnitude
-            if dist <= range then
-                table.insert(plantboxes, { model = deployable, position = deployable.PrimaryPart.Position })
+        if deployable:IsA("Model") and deployable.Name == "Plant Box" then
+            local entityid = deployable:GetAttribute("EntityID")
+            local ppart = deployable.PrimaryPart or deployable:FindFirstChildWhichIsA("BasePart")
+            if entityid and ppart then
+                local dist = (ppart.Position - root.Position).Magnitude
+                if dist <= range then
+                    table.insert(plantboxes, { entityid = entityid, deployable = deployable, dist = dist })
+                end
             end
         end
     end
     return plantboxes
 end
 
-local function updatePlantBoxOrder(range)
-    plantBoxOrder = getPlantBoxes(range)
-    currentIndex = 1
+local function getBushes(range, fruitname)
+    local bushes = {}
+    for _, model in ipairs(workspace:GetChildren()) do
+        if model:IsA("Model") and model.Name:find(fruitname) then
+            local ppart = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
+            if ppart then
+                local dist = (ppart.Position - root.Position).Magnitude
+                if dist <= range then
+                    local entityid = model:GetAttribute("EntityID")
+                    if entityid then
+                        table.insert(bushes, { entityid = entityid, model = model, dist = dist })
+                    end
+                end
+            end
+        end
+    end
+    return bushes
 end
+
+-- Tween to Plant Box logic for WindUI
+task.spawn(function()
+    while true do
+        if not tweenPlantBoxEnabled then
+            task.wait(0.1)
+        else
+            local range = tweenRange or 250
+            local plantboxes = getPlantBoxes(range)
+            table.sort(plantboxes, function(a, b) return a.dist < b.dist end)
+            for _, box in ipairs(plantboxes) do
+                if not box.deployable:FindFirstChild("Seed") then
+                    local targetCFrame = box.deployable.PrimaryPart.CFrame + Vector3.new(0, 5, 0)
+                    tweenToTarget(targetCFrame)
+                    break
+                end
+            end
+            task.wait(0.1)
+        end
+    end
+end)
+
+-- Tween to Bush + Plant Box logic for WindUI
+local selectedFruit = "Bloodfruit" -- Set a default or connect to a dropdown if you want
+
+Tabs.Brainrot:Dropdown({
+    Title = "Select Bush Fruit",
+    Values = { "Bloodfruit", "Gold", "Emerald", "Pink Diamond", "Jelly" },
+    Value = "Bloodfruit",
+    Multi = false,
+    Callback = function(val)
+        selectedFruit = type(val) == "table" and val[1] or val
+    end
+})
 
 task.spawn(function()
     while true do
-        if not walkEnabled then
+        if not tweenBushEnabled then
             task.wait(0.1)
         else
-            if #plantBoxOrder == 0 or currentIndex > #plantBoxOrder then
-                updatePlantBoxOrder(walkRange)
-            end
+            local range = tweenRange or 250
+            local bushes = getBushes(range, selectedFruit)
+            table.sort(bushes, function(a, b) return a.dist < b.dist end)
 
-            if #plantBoxOrder == 0 then
-                task.wait(1)
-                continue
+            if #bushes > 0 then
+                for _, bush in ipairs(bushes) do
+                    local targetCFrame = bush.model.PrimaryPart.CFrame + Vector3.new(0, 5, 0)
+                    tweenToTarget(targetCFrame)
+                    break
+                end
+            else
+                local plantboxes = getPlantBoxes(range)
+                table.sort(plantboxes, function(a, b) return a.dist < b.dist end)
+                for _, box in ipairs(plantboxes) do
+                    if not box.deployable:FindFirstChild("Seed") then
+                        local targetCFrame = box.deployable.PrimaryPart.CFrame + Vector3.new(0, 5, 0)
+                        tweenToTarget(targetCFrame)
+                        break
+                    end
+                end
             end
-
-            local plantbox = plantBoxOrder[currentIndex]
-            if plantbox and root and root.Parent and root.Parent:FindFirstChild("Humanoid") then
-                local humanoid = root.Parent:FindFirstChild("Humanoid")
-                humanoid:MoveTo(plantbox.position)
-                currentIndex = currentIndex + 1
-            end
-            task.wait(0.5)
+            task.wait(0.1)
         end
     end
 end)
