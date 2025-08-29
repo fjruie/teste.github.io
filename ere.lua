@@ -549,9 +549,7 @@ end)
 
 
 
--- Add to your WindUI setup, under Tabs.Brainrot (Auto Pickup?)
 local tweenPlantBoxEnabled = false
-local tweenBushEnabled = false
 local tweenRange = 250
 
 Tabs.Brainrot:Toggle({
@@ -559,14 +557,6 @@ Tabs.Brainrot:Toggle({
     Default = false,
     Callback = function(val)
         tweenPlantBoxEnabled = val
-    end
-})
-
-Tabs.Brainrot:Toggle({
-    Title = "Tween to Bush + Plant Box",
-    Default = false,
-    Callback = function(val)
-        tweenBushEnabled = val
     end
 })
 
@@ -590,6 +580,7 @@ local function tweenToTarget(targetCFrame)
     local tw = TweenService:Create(root, tweenInfo, { CFrame = targetCFrame })
     tw:Play()
     tweening = tw
+    tw.Completed:Wait()
 end
 
 local function getPlantBoxes(range)
@@ -609,26 +600,6 @@ local function getPlantBoxes(range)
     return plantboxes
 end
 
-local function getBushes(range, fruitname)
-    local bushes = {}
-    for _, model in ipairs(workspace:GetChildren()) do
-        if model:IsA("Model") and model.Name:find(fruitname) then
-            local ppart = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
-            if ppart then
-                local dist = (ppart.Position - root.Position).Magnitude
-                if dist <= range then
-                    local entityid = model:GetAttribute("EntityID")
-                    if entityid then
-                        table.insert(bushes, { entityid = entityid, model = model, dist = dist })
-                    end
-                end
-            end
-        end
-    end
-    return bushes
-end
-
--- Tween to Plant Box logic for WindUI
 task.spawn(function()
     while true do
         if not tweenPlantBoxEnabled then
@@ -637,55 +608,20 @@ task.spawn(function()
             local range = tweenRange or 250
             local plantboxes = getPlantBoxes(range)
             table.sort(plantboxes, function(a, b) return a.dist < b.dist end)
+            local foundEmpty = false
             for _, box in ipairs(plantboxes) do
                 if not box.deployable:FindFirstChild("Seed") then
                     local targetCFrame = box.deployable.PrimaryPart.CFrame + Vector3.new(0, 5, 0)
                     tweenToTarget(targetCFrame)
-                    break
+                    task.wait(0.2)
+                    foundEmpty = true
                 end
             end
-            task.wait(0.1)
-        end
-    end
-end)
-
--- Tween to Bush + Plant Box logic for WindUI
-local selectedFruit = "Bloodfruit" -- Set a default or connect to a dropdown if you want
-
-Tabs.Brainrot:Dropdown({
-    Title = "Select Bush Fruit",
-    Values = { "Bloodfruit", "Gold", "Emerald", "Pink Diamond", "Jelly" },
-    Value = "Bloodfruit",
-    Multi = false,
-    Callback = function(val)
-        selectedFruit = type(val) == "table" and val[1] or val
-    end
-})
-
-task.spawn(function()
-    while true do
-        if not tweenBushEnabled then
-            task.wait(0.1)
-        else
-            local range = tweenRange or 250
-            local bushes = getBushes(range, selectedFruit)
-            table.sort(bushes, function(a, b) return a.dist < b.dist end)
-
-            if #bushes > 0 then
-                for _, bush in ipairs(bushes) do
-                    local targetCFrame = bush.model.PrimaryPart.CFrame + Vector3.new(0, 5, 0)
-                    tweenToTarget(targetCFrame)
-                    break
-                end
-            else
-                local plantboxes = getPlantBoxes(range)
-                table.sort(plantboxes, function(a, b) return a.dist < b.dist end)
+            if not foundEmpty then
                 for _, box in ipairs(plantboxes) do
-                    if not box.deployable:FindFirstChild("Seed") then
-                        local targetCFrame = box.deployable.PrimaryPart.CFrame + Vector3.new(0, 5, 0)
-                        tweenToTarget(targetCFrame)
-                        break
-                    end
+                    local targetCFrame = box.deployable.PrimaryPart.CFrame + Vector3.new(0, 5, 0)
+                    tweenToTarget(targetCFrame)
+                    task.wait(0.2)
                 end
             end
             task.wait(0.1)
