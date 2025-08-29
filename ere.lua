@@ -534,3 +534,88 @@ task.spawn(function()
         end
     end
 end)
+
+
+
+
+
+
+
+
+local walkEnabled = false
+local walkRange = 1000
+local lastVisited = {}
+local plantBoxOrder = {}
+local currentIndex = 1
+
+Tabs.Brainrot:Toggle({
+    Title = "Fast Walk Plant Boxes",
+    Default = false,
+    Callback = function(val)
+        walkEnabled = val
+    end
+})
+
+local function getPlantBoxes(range)
+    local plantboxes = {}
+    for _, deployable in ipairs(workspace.Deployables:GetChildren()) do
+        if deployable:IsA("Model") and deployable.Name == "Plant Box" then
+            local ppart = deployable.PrimaryPart or deployable:FindFirstChildWhichIsA("BasePart")
+            if ppart then
+                local dist = (ppart.Position - root.Position).Magnitude
+                if dist <= range then
+                    table.insert(plantboxes, { model = deployable, position = ppart.Position })
+                end
+            end
+        end
+    end
+    return plantboxes
+end
+
+local function updatePlantBoxOrder(range)
+    plantBoxOrder = getPlantBoxes(range)
+    currentIndex = 1
+    lastVisited = {}
+end
+
+task.spawn(function()
+    while true do
+        if not walkEnabled then
+            task.wait(0.1)
+        else
+            if #plantBoxOrder == 0 or currentIndex > #plantBoxOrder then
+                updatePlantBoxOrder(walkRange)
+            end
+
+            if #plantBoxOrder == 0 then
+                task.wait(1)
+                continue
+            end
+
+            local found = false
+            for i = 1, #plantBoxOrder do
+                local idx = ((currentIndex + i - 2) % #plantBoxOrder) + 1
+                local plantbox = plantBoxOrder[idx]
+                if not lastVisited[plantbox.model] then
+                    currentIndex = idx
+                    found = true
+                    break
+                end
+            end
+            if not found then
+                lastVisited = {}
+                currentIndex = 1
+            end
+
+            local plantbox = plantBoxOrder[currentIndex]
+            if plantbox and root and root.Parent and root.Parent:FindFirstChild("Humanoid") then
+                local humanoid = root.Parent:FindFirstChild("Humanoid")
+                humanoid.WalkSpeed = 50
+                humanoid:MoveTo(plantbox.position + Vector3.new(0, 5, 0))
+                lastVisited[plantbox.model] = true
+                currentIndex = currentIndex + 1
+            end
+            task.wait(0.5)
+        end
+    end
+end)
