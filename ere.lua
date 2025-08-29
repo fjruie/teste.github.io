@@ -542,6 +542,8 @@ end)
 
 
 
+
+
 local walkEnabled = false
 local walkRange = 1000
 local lastVisited = {}
@@ -610,8 +612,8 @@ task.spawn(function()
             local plantbox = plantBoxOrder[currentIndex]
             if plantbox and root and root.Parent and root.Parent:FindFirstChild("Humanoid") then
                 local humanoid = root.Parent:FindFirstChild("Humanoid")
-                humanoid.WalkSpeed = 50
-                humanoid:MoveTo(plantbox.position + Vector3.new(0, 5, 0))
+                humanoid.WalkSpeed = 16
+                humanoid:MoveTo(plantbox.position)
                 lastVisited[plantbox.model] = true
                 currentIndex = currentIndex + 1
             end
