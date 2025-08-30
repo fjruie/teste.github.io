@@ -511,9 +511,9 @@ task.spawn(function()
             for _, box in ipairs(plantboxes) do
                 if not box.deployable:FindFirstChild("Seed") then
                     plant(box.entityid, itemID)
+                    task.wait(plantDelay)
                 end
             end
-            task.wait(plantDelay)
         else
             task.wait(0.1)
         end
