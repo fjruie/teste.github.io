@@ -679,12 +679,12 @@ task.spawn(function()
             if hp < healHPThreshold then
                 while hp < 100 and autoHealEnabled do
                     heal()
-                    task.wait(0.1)
+                    task.wait(0.01)
                     hp = getCurrentHP()
                 end
             end
         end
-        task.wait(0.2)
+        task.wait(0.1)
     end
 end)
 
