@@ -629,3 +629,60 @@ task.spawn(function()
         end
     end
 end)
+
+
+
+
+
+
+
+local autoHealEnabled = false
+local healHPThreshold = 40
+
+Tabs.Brainrot:Toggle({
+    Title = "Auto Heal",
+    Default = false,
+    Callback = function(val)
+        autoHealEnabled = val
+    end
+})
+
+Tabs.Brainrot:Slider({
+    Title = "Heal HP Threshold",
+    Value = {Min = 1, Max = 100, Default = 40},
+    Step = 1,
+    Callback = function(val)
+        healHPThreshold = tonumber(val)
+    end
+})
+
+local function getCurrentHP()
+    local plr = game.Players.LocalPlayer
+    if plr and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+        return plr.Character.Humanoid.Health
+    end
+    return 0
+end
+
+local function heal()
+    local args = {
+        buffer.fromstring("'\014\000")
+    }
+    game:GetService("ReplicatedStorage"):WaitForChild("ByteNetReliable"):FireServer(unpack(args))
+end
+
+task.spawn(function()
+    while true do
+        if autoHealEnabled then
+            local hp = getCurrentHP()
+            if hp < healHPThreshold then
+                while hp < 100 and autoHealEnabled do
+                    heal()
+                    task.wait(0.1)
+                    hp = getCurrentHP()
+                end
+            end
+        end
+        task.wait(0.2)
+    end
+end)
