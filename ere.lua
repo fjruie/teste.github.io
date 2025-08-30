@@ -694,17 +694,16 @@ end)
 
 
 
+
 local RunService = game:GetService("RunService")
 local PlayersFolder = workspace:WaitForChild("Players")
-
 local TRACKED_ITEMS = {
     ["God Axe"] = Color3.fromRGB(255, 255, 0),
     ["Pink Diamond Chestplate"] = Color3.fromRGB(255, 50, 180),
     ["Pink Diamond Greaves"] = Color3.fromRGB(255, 50, 180),
 }
-
 local activeAdornments = {}
-
+local LocalPlayer = game:GetService("Players").LocalPlayer
 local function highlightPart(part, color)
     if part:FindFirstChild("ItemESP") then
         part.ItemESP:Destroy()
@@ -720,15 +719,16 @@ local function highlightPart(part, color)
     box.Parent = part
     return box
 end
-
 local function removeHighlight(part)
     if part:FindFirstChild("ItemESP") then
         part.ItemESP:Destroy()
     end
 end
-
 local function updateESP()
     for _, playerFolder in ipairs(PlayersFolder:GetChildren()) do
+        if LocalPlayer and playerFolder.Name == LocalPlayer.Name then
+            continue
+        end
         for itemName, color in pairs(TRACKED_ITEMS) do
             local item = nil
             if playerFolder:FindFirstChild("Tools") and playerFolder.Tools:FindFirstChild(itemName) then
@@ -764,7 +764,6 @@ local function updateESP()
         end
     end
 end
-
 local function removeAllESP()
     for playerFolder, items in pairs(activeAdornments) do
         for itemName, partBoxes in pairs(items) do
@@ -775,7 +774,6 @@ local function removeAllESP()
     end
     activeAdornments = {}
 end
-
 local connection
 local function enableItemESP()
     if connection then connection:Disconnect() end
@@ -783,13 +781,11 @@ local function enableItemESP()
         updateESP()
     end)
 end
-
 local function disableItemESP()
     if connection then connection:Disconnect() end
     removeAllESP()
 end
-
-Tabs.Hide:Toggle({
+Tabs.Esp:Toggle({
     Title = "ESP",
     Default = false,
     Callback = function(state)
