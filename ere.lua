@@ -687,3 +687,116 @@ task.spawn(function()
         task.wait(0.2)
     end
 end)
+
+
+
+
+
+
+
+local RunService = game:GetService("RunService")
+local PlayersFolder = workspace:WaitForChild("Players")
+
+local TRACKED_ITEMS = {
+    ["God Axe"] = Color3.fromRGB(255, 255, 0),
+    ["Pink Diamond Chestplate"] = Color3.fromRGB(255, 50, 180),
+    ["Pink Diamond Greaves"] = Color3.fromRGB(255, 50, 180),
+}
+
+local activeAdornments = {}
+
+local function highlightPart(part, color)
+    if part:FindFirstChild("ItemESP") then
+        part.ItemESP:Destroy()
+    end
+    local box = Instance.new("BoxHandleAdornment")
+    box.Name = "ItemESP"
+    box.Size = part.Size
+    box.Adornee = part
+    box.AlwaysOnTop = true
+    box.ZIndex = 10
+    box.Transparency = 0.4
+    box.Color3 = color
+    box.Parent = part
+    return box
+end
+
+local function removeHighlight(part)
+    if part:FindFirstChild("ItemESP") then
+        part.ItemESP:Destroy()
+    end
+end
+
+local function updateESP()
+    for _, playerFolder in ipairs(PlayersFolder:GetChildren()) do
+        for itemName, color in pairs(TRACKED_ITEMS) do
+            local item = nil
+            if playerFolder:FindFirstChild("Tools") and playerFolder.Tools:FindFirstChild(itemName) then
+                item = playerFolder.Tools:FindFirstChild(itemName)
+            elseif playerFolder:FindFirstChild(itemName) then
+                item = playerFolder:FindFirstChild(itemName)
+            end
+            if not item then
+                if activeAdornments[playerFolder] and activeAdornments[playerFolder][itemName] then
+                    for part, box in pairs(activeAdornments[playerFolder][itemName]) do
+                        removeHighlight(part)
+                    end
+                    activeAdornments[playerFolder][itemName] = nil
+                end
+                continue
+            end
+            local parts = {}
+            if item:IsA("BasePart") then
+                table.insert(parts, item)
+            elseif item:IsA("Model") then
+                for _, part in ipairs(item:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        table.insert(parts, part)
+                    end
+                end
+            end
+            activeAdornments[playerFolder] = activeAdornments[playerFolder] or {}
+            activeAdornments[playerFolder][itemName] = activeAdornments[playerFolder][itemName] or {}
+            for _, part in ipairs(parts) do
+                removeHighlight(part)
+                activeAdornments[playerFolder][itemName][part] = highlightPart(part, color)
+            end
+        end
+    end
+end
+
+local function removeAllESP()
+    for playerFolder, items in pairs(activeAdornments) do
+        for itemName, partBoxes in pairs(items) do
+            for part, box in pairs(partBoxes) do
+                removeHighlight(part)
+            end
+        end
+    end
+    activeAdornments = {}
+end
+
+local connection
+local function enableItemESP()
+    if connection then connection:Disconnect() end
+    connection = RunService.Heartbeat:Connect(function()
+        updateESP()
+    end)
+end
+
+local function disableItemESP()
+    if connection then connection:Disconnect() end
+    removeAllESP()
+end
+
+Tabs.Hide:Toggle({
+    Title = "ESP",
+    Default = false,
+    Callback = function(state)
+        if state then
+            enableItemESP()
+        else
+            disableItemESP()
+        end
+    end
+})
