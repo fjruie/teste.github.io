@@ -29,7 +29,8 @@ local Tabs = {
     Hide = Window:Tab({ Title = "Combat", Icon = "eye-off" }),
     Jump = Window:Tab({ Title = "Auto Farm", Icon = "shopping-basket" }),
     Random = Window:Tab({ Title = "Random Features", Icon = "dices" }),
-    Brainrot = Window:Tab({ Title = "Auto Pickup?", Icon = "brain" }), 
+    Brainrot = Window:Tab({ Title = "Auto Heal", Icon = "brain" }), 
+    Esp = Window:Tab({ Title = "ESP", Icon = "rocket" }), 
 }
 
 
